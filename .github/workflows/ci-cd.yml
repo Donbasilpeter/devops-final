@@ -1,0 +1,46 @@
+name: Deploy Weather App to EC2
+
+on:
+  push:
+    branches:
+      - ci-cd-setup
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v3
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '20'
+
+    - name: Install Dependencies
+      run: npm ci
+
+    - name: Set up SSH
+      uses: webfactory/ssh-agent@v0.7.0
+      with:
+        ssh-private-key: ${{ secrets.EC2_SSH_KEY }}
+
+    - name: Deploy to EC2
+      env:
+        HOST: ec2-35-94-173-244.us-west-2.compute.amazonaws.com
+        USER: ec2-user
+      run: |
+        scp -o StrictHostKeyChecking=no -r ./* ${USER}@${HOST}:~/weatherapp/
+        ssh -o StrictHostKeyChecking=no ${USER}@${HOST} << EOF
+          cd ~/weatherapp
+          npm install
+          pm2 restart weatherapp || pm2 start npm --name "weatherapp" -- start
+        EOF
+
+    - name: Ensure .env File Exists
+      env:
+        HOST: ec2-35-94-173-244.us-west-2.compute.amazonaws.com
+        USER: ec2-user
+      run: |
+        ssh -o StrictHostKeyChecking=no ${USER}@${HOST} "touch ~/weatherapp/.env"
