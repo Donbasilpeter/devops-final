@@ -35,8 +35,10 @@ jobs:
         ssh -o StrictHostKeyChecking=no ${USER}@${HOST} << EOF
           cd ~/weatherapp
           npm install
+          npm install -g pm2
           pm2 restart weatherapp || pm2 start npm --name "weatherapp" -- start
         EOF
+
 
     - name: Ensure .env File Exists
       env:
